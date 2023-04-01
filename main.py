@@ -394,6 +394,36 @@ char_data_dict = {
         0, 0, 0, 0, 0, 0, #
         0, 0, 0, 0, 0, 0, #
     ],
+    ':': [
+        0, 0, 0, 0, 0, 0, #
+        0, 0, 1, 1, 0, 0, #
+        0, 0, 1, 1, 0, 0, #
+        0, 0, 0, 0, 0, 0, #
+        0, 0, 0, 0, 0, 0, #
+        0, 0, 1, 1, 0, 0, #
+        0, 0, 1, 1, 0, 0, #
+        0, 0, 0, 0, 0, 0, #
+    ],
+    ')': [
+        0, 0, 1, 0, 0, 0, #
+        0, 0, 0, 1, 0, 0, #
+        0, 0, 0, 0, 1, 0, #
+        0, 0, 0, 0, 1, 0, #
+        0, 0, 0, 0, 1, 0, #
+        0, 0, 0, 1, 0, 0, #
+        0, 0, 1, 0, 0, 0, #
+        0, 0, 0, 0, 0, 0, #
+    ],
+    '(': [
+        0, 0, 0, 0, 1, 0, #
+        0, 0, 0, 1, 0, 0, #
+        0, 0, 1, 0, 0, 0, #
+        0, 0, 1, 0, 0, 0, #
+        0, 0, 1, 0, 0, 0, #
+        0, 0, 0, 1, 0, 0, #
+        0, 0, 0, 0, 1, 0, #
+        0, 0, 0, 0, 0, 0, #
+    ],
     '>': [
         0, 0, 1, 0, 0, 0, #
         0, 0, 0, 1, 0, 0, #
@@ -461,19 +491,35 @@ while wlan.active() == False:
 print(wlan.ifconfig())
 
 html = """<!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
+  <style>
+      input[type="submit"] {
+        font-size: 80px;
+        padding: 35px 30px;
+      }
+      b {
+        font-size: 140px;
+      }
+  </style>
+
     </head>
     <body>
         <form method="GET">
-        <input type="submit" name="LEFT" value="<<<<">
+        <center>
+        <p><b>%s</b></p>
+        <hr>
+        <input type="submit" name="LEFT" value="<<">
         <input type="submit" name="STOP" value="STOP">
-        <input type="submit" name="RIGHT" value=">>>>">
-        <input type="submit" name="OFF" value="OFF">
-        <input type="submit" name="THANKS" value="THANKS">
+        <input type="submit" name="RIGHT" value=">>">
+        <hr/>
+        <input type="submit" name="OFF" value=" * * * OFF * * * ">
+        <hr/>
+        <input type="submit" name="THANKS" value=" * * THANKS * *">
         <input type="submit" name="IRIGHT" value="I HAD RIGHT">
-        <input type="submit" name="OVERTAKE" value="OVERTAKE">
-        <input type="submit" name="DISTANCE" value="DISTANCE">
+        <input type="submit" name="OVERTAKE" value="NO OVERTAKE HERE">
+        <input type="submit" name="DISTANCE" value="KEEP DISTANCE">
+        </center>
         </form>
     </body>
 </html>
@@ -495,6 +541,7 @@ s.listen(1)
 _thread.start_new_thread(led_func, ())
 
 print('listening on', addr)
+status = "- - -"
 
 # Listen for connections
 while True:
@@ -523,6 +570,7 @@ while True:
             thread_run_text = False
             thread_color = YELLOW
             some_req = True
+            status = " < < < < "
 
         if led_right == 6:
             # display_text(YELLOW, "    >  ", 0)
@@ -531,6 +579,7 @@ while True:
             thread_run_text = False
             thread_color = YELLOW
             some_req = True
+            status = " > > > > "
 
         if led_stop == 6:
             # display_text(RED, " STOP", 0)
@@ -539,6 +588,7 @@ while True:
             thread_run_text = False
             thread_color = RED
             some_req = True
+            status = " STOP "
 
         if led_off == 6:
             pixels_fill(BLACK)
@@ -548,20 +598,23 @@ while True:
             thread_run_text = False
             thread_color = RED
             some_req = True
+            status = " - - - "
 
         if led_thanks == 6:
-            thread_text1 = "     THANK YOU "
+            thread_text1 = "     THANK YOU :) "
             thread_run_text = True
             thread_color = GREEN
             thread_reset_offset = True
             some_req = True
+            status = "THANKS"
 
         if led_iright == 6:
-            thread_text1 = "     I HAD THE RIGHT OF WAY "
+            thread_text1 = "     I HAD RIGHT OF WAY "
             thread_run_text = True
             thread_color = BLUE
             thread_reset_offset = True
             some_req = True
+            status = "I HAD RIGHT"
 
         if led_overtake == 6:
             thread_text1 = "     YOU CAN NOT OVERTAKE HERE "
@@ -569,15 +622,17 @@ while True:
             thread_color = YELLOW
             thread_reset_offset = True
             some_req = True
+            status = "NO OVRTAKE"
 
         if led_distance == 6:
-            thread_text1 = "     PLEASE RESPECT SAFETY DISTANCE "
+            thread_text1 = "     DISTANCE PLEASE RESPECT SAFETY DISTANCE "
             thread_run_text = True
-            thread_color = RED
+            thread_color = YELLOW
             thread_reset_offset = True
             some_req = True
+            status = "DISTNCE PLS"
 
-        response = html
+        response = html % status
         if some_req:
             cl.send('HTTP/1.0 302 Moved\r\nLocation: /\r\n\r\n')
             print("send redirect")
