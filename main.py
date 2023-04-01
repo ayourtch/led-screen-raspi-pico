@@ -1,17 +1,10 @@
-#x# from machine import Pin, Timer
-#x# led = Pin(15, Pin.OUT)
-#x# timer = Timer()
-#x# 
-#x# def blink(timer):
-#x#     led.toggle()
-#x# 
-#x# timer.init(freq=2.5, mode=Timer.PERIODIC, callback=blink)
-
-# Example using PIO to drive a set of WS2812 LEDs.
 
 import array, time
+import network
+import socket
 from machine import Pin
 import rp2
+import _thread
 
 # Configure the number of WS2812 LEDs.
 NUM_LEDS = 16*16
@@ -104,10 +97,17 @@ COLORS = (RED, YELLOW, GREEN, CYAN, BLUE, PURPLE, WHITE)
 NUM_LETTERS = int(NUM_LEDS/8/6)
 
 def display_text(text_color, text, offs):
+    global PIN_NUM
+    global NUM_LETTERS
+    global char_data_dict
+
     for c in range(NUM_LETTERS+1):
         index = c + int(offs/6)
         if index < len(text):
-            char_data = char_data_dict[text[index]]
+            if text[index] in char_data_dict.keys():
+                char_data = char_data_dict[text[index]]
+            else:
+                char_data = char_data_dict['X']
         else:
             char_data = char_data_dict[' ']
         for y in range(8):
@@ -394,24 +394,200 @@ char_data_dict = {
         0, 0, 0, 0, 0, 0, #
         0, 0, 0, 0, 0, 0, #
     ],
+    '>': [
+        0, 0, 1, 0, 0, 0, #
+        0, 0, 0, 1, 0, 0, #
+        0, 0, 0, 0, 1, 0, #
+        1, 1, 1, 1, 1, 1, #
+        0, 0, 0, 0, 1, 0, #
+        0, 0, 0, 1, 0, 0, #
+        0, 0, 1, 0, 0, 0, #
+        0, 0, 0, 0, 0, 0, #
+    ],
+    '<': [
+        0, 0, 0, 1, 0, 0, #
+        0, 0, 1, 0, 0, 0, #
+        0, 1, 0, 0, 0, 0, #
+        1, 1, 1, 1, 1, 1, #
+        0, 1, 0, 0, 0, 0, #
+        0, 0, 1, 0, 0, 0, #
+        0, 0, 0, 1, 0, 0, #
+        0, 0, 0, 0, 0, 0, #
+    ],
   '~': []
 }
 
+thread_text1 = ""
+thread_text2 = ""
+thread_color = YELLOW
+thread_run_text = False
+thread_reset_offset = False
 
+def led_func():
+    global thread_text1
+    global thread_text1
+    global thread_color
+    global thread_run_text
+    global thread_reset_offset
+    i = 0;
+    while True:
+        if thread_run_text:
+            for ofs in range(6*len(thread_text1)):
+                if not thread_run_text:
+                    break
+                if thread_reset_offset:
+                    thread_reset_offset = False
+                    break
+                display_text(thread_color, thread_text1, ofs)
+        else:
+            display_text(thread_color, thread_text1, 0)
+            time.sleep_ms(200)
+            display_text(thread_color, thread_text2, 0)
+            time.sleep_ms(200)
+
+
+
+# change these please :-)
+ssid = 'PHI'
+password = 'chimera1'
+wlan = network.WLAN(network.AP_IF)
+wlan.config(essid=ssid, password=password)
+wlan.active(True)
+while wlan.active() == False:
+    print("waiting for ap activation...")
+    time.sleep(1)
+    pass
+
+print(wlan.ifconfig())
+
+html = """<!DOCTYPE html>
+<html>
+    <head>
+    </head>
+    <body>
+        <form method="GET">
+        <input type="submit" name="LEFT" value="<<<<">
+        <input type="submit" name="STOP" value="STOP">
+        <input type="submit" name="RIGHT" value=">>>>">
+        <input type="submit" name="OFF" value="OFF">
+        <input type="submit" name="THANKS" value="THANKS">
+        <input type="submit" name="IRIGHT" value="I HAD RIGHT">
+        <input type="submit" name="OVERTAKE" value="OVERTAKE">
+        <input type="submit" name="DISTANCE" value="DISTANCE">
+        </form>
+    </body>
+</html>
+"""
+
+if wlan.status() != 3:
+    raise RuntimeError('network connection failed')
+else:
+    print('connected')
+    status = wlan.ifconfig()
+    print( 'ip = ' + status[0] )
+
+addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
+
+s = socket.socket()
+s.bind(addr)
+s.listen(1)
+
+_thread.start_new_thread(led_func, ())
+
+print('listening on', addr)
+
+# Listen for connections
 while True:
-    text = "    CRITICAL MASS   RIDE TOGETHER    "
-    for color in COLORS:       
-      for off in range(6*len(text)):
-        display_text(color, text, off)
+    try:
+        print('waiting for conn...')
+        cl, addr = s.accept()
+        print('client connected from', addr)
+        request = cl.recv(1024)
+        print(request)
 
-    print("fills")
-    for color in COLORS:       
-        pixels_fill(color)
-        pixels_show()
+        request = str(request)
+        led_left = request.find('/?LEFT')
+        led_right = request.find('/?RIGHT')
+        led_off = request.find('/?OFF')
+        led_stop = request.find('/?STOP')
+        led_thanks = request.find('/?THANKS')
+        led_iright = request.find('/?IRIGHT')
+        led_overtake = request.find('/?OVERTAKE')
+        led_distance = request.find('/?DISTANCE')
+        some_req = False
 
-    print("chases")
-    # for color in COLORS:       
-    #     color_chase(color, 0.001)
+        if led_left == 6:
+            # display_text(YELLOW, "<      ", 0)
+            thread_text1 = "<      "
+            thread_text2 = " <      "
+            thread_run_text = False
+            thread_color = YELLOW
+            some_req = True
 
-    print("rainbow")
-    rainbow_cycle(0)
+        if led_right == 6:
+            # display_text(YELLOW, "    >  ", 0)
+            thread_text1 = "    >  "
+            thread_text2 = "   >   "
+            thread_run_text = False
+            thread_color = YELLOW
+            some_req = True
+
+        if led_stop == 6:
+            # display_text(RED, " STOP", 0)
+            thread_text1 = " STOP"
+            thread_text2 = " STOP"
+            thread_run_text = False
+            thread_color = RED
+            some_req = True
+
+        if led_off == 6:
+            pixels_fill(BLACK)
+            pixels_show()
+            thread_text1 = ""
+            thread_text2 = ""
+            thread_run_text = False
+            thread_color = RED
+            some_req = True
+
+        if led_thanks == 6:
+            thread_text1 = "     THANK YOU "
+            thread_run_text = True
+            thread_color = GREEN
+            thread_reset_offset = True
+            some_req = True
+
+        if led_iright == 6:
+            thread_text1 = "     I HAD THE RIGHT OF WAY "
+            thread_run_text = True
+            thread_color = BLUE
+            thread_reset_offset = True
+            some_req = True
+
+        if led_overtake == 6:
+            thread_text1 = "     YOU CAN NOT OVERTAKE HERE "
+            thread_run_text = True
+            thread_color = YELLOW
+            thread_reset_offset = True
+            some_req = True
+
+        if led_distance == 6:
+            thread_text1 = "     PLEASE RESPECT SAFETY DISTANCE "
+            thread_run_text = True
+            thread_color = RED
+            thread_reset_offset = True
+            some_req = True
+
+        response = html
+        if some_req:
+            cl.send('HTTP/1.0 302 Moved\r\nLocation: /\r\n\r\n')
+            print("send redirect")
+        else:
+            cl.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
+            cl.send(response)
+        cl.close()
+
+    except OSError as e:
+        cl.close()
+        print('connection closed')
+
+
