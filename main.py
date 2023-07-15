@@ -14,7 +14,7 @@ from machine import Pin
 import rp2
 
 # Configure the number of WS2812 LEDs.
-NUM_LEDS = 16*16
+NUM_LEDS = 16*16*3
 PIN_NUM = 15
 brightness = 0.2
 
@@ -394,12 +394,32 @@ char_data_dict = {
         0, 0, 0, 0, 0, 0, #
         0, 0, 0, 0, 0, 0, #
     ],
+    '-': [
+        0, 0, 0, 0, 0, 0, #
+        0, 0, 0, 0, 0, 0, #
+        0, 0, 0, 0, 0, 0, #
+        0, 1, 1, 1, 0, 0, #
+        0, 0, 0, 0, 0, 0, #
+        0, 0, 0, 0, 0, 0, #
+        0, 0, 0, 0, 0, 0, #
+        0, 0, 0, 0, 0, 0, #
+    ],
+    '#': [
+        0, 1, 0, 1, 0, 0,  # O   O 
+        1, 1, 1, 1, 1, 0,  # O   O 
+        0, 1, 0, 1, 0, 0,  # O   O 
+        0, 1, 0, 1, 0, 0,  # O   O 
+        0, 1, 0, 1, 0, 0,  # O   O 
+        1, 1, 1, 1, 1, 0,  # O   O 
+        0, 1, 0, 1, 0, 0,  # O   O 
+        0, 0, 0, 0, 0, 0,  #       
+    ],
   '~': []
 }
 
 
 while True:
-    text = "    CRITICAL MASS   RIDE TOGETHER    "
+    text = "    CRITICAL MASS - #LETSRIDETOGETHER    "
     for color in COLORS:       
       for off in range(6*len(text)):
         display_text(color, text, off)
